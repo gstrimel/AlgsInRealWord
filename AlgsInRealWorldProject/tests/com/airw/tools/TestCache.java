@@ -4,8 +4,12 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
 
 import com.airw.cache.LRUCache;
+import com.airw.framework.CacheIntegerFactory;
 
 /**
  * Simple class to test the caching system. Negates a file with numbers.
@@ -29,12 +33,18 @@ public class TestCache {
         }
         bw.close();
 
-        LRUCache lru = new LRUCache(blockSize, numBlocksInCache,
-                testFile.getAbsolutePath());
+        LRUCache<Integer> lru = new LRUCache<Integer>(testFile.getAbsolutePath(), new CacheIntegerFactory(), blockSize, numBlocksInCache
+                );
 
+        List<Integer> accesses = new LinkedList<Integer>();
         for (int i = 0; i < 10 * fileSize; i++) {
+            accesses.add(i);
+        }
+        Collections.shuffle(accesses);
+        
+        for(Integer i : accesses){
             if (i % 3 == 0) {
-                String s = "" + (-(i % fileSize));
+                Integer s = (-(i % fileSize));
                 lru.set(i % fileSize, s);
             } else {
                 lru.get(i % fileSize);

@@ -12,7 +12,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-public class LRUCache {
+import com.airw.framework.CacheObjectFactory;
+
+public class LRUCache<T extends Comparable<T>> {
 
     private int blockSize; // Number of entries in a block.
     private int numBlocksInCache; // Number of blocks in the cache.
@@ -22,6 +24,7 @@ public class LRUCache {
     private long accesses;
     private String fileName;
     private int numBlocksPerSubFile;
+    private CacheObjectFactory<T> cacheObjectFactory;
 
     /**
      * Constructor for LRUCache.
@@ -35,13 +38,15 @@ public class LRUCache {
      * @throws IOException
      *             Thrown on any error opening and scanning file.
      */
-    public LRUCache(int blockSize, final int numBlocksInCache, String fileName)
+    public LRUCache(String fileName, CacheObjectFactory<T> cacheObjectFactory, int blockSize, final int numBlocksInCache)
             throws IOException {
         this.blockSize = blockSize;
         this.numBlocksInCache = numBlocksInCache;
 
         this.fileName = fileName.replace(".txt", "");
 
+        this.cacheObjectFactory = cacheObjectFactory;
+        
         // Count the number of lines in the file.
         LineNumberReader lnr = new LineNumberReader(new FileReader(new File(
                 fileName)));
@@ -82,7 +87,7 @@ public class LRUCache {
      * @return The element at this index.
      * @throws IOException
      */
-    public String get(long index) throws IOException {
+    public T get(long index) throws IOException {
         if (index > numEntriesInFile) {
             throw new IndexOutOfBoundsException(
                     "Attempted to access element out of bounds.");
@@ -92,7 +97,7 @@ public class LRUCache {
         int indexInBlock = (int) (index % blockSize);
         if (cache.containsKey(blockNumber)) {
             hits++;
-            return cache.get(blockNumber).get(indexInBlock);
+            return cacheObjectFactory.createCacheObject(cache.get(blockNumber).get(indexInBlock));
         } else {
             List<String> block = pullBlock(blockNumber);
             cache.put(blockNumber, block);
@@ -100,7 +105,7 @@ public class LRUCache {
                 writeEntries(cache.getEldestEntry().getKey(), cache
                         .getEldestEntry().getValue());
             }
-            return block.get(indexInBlock);
+            return  cacheObjectFactory.createCacheObject(block.get(indexInBlock));
         }
     }
 
@@ -113,7 +118,7 @@ public class LRUCache {
      *            The string we are setting the index to.
      * @throws IOException
      */
-    public void set(long index, String s) throws IOException {
+    public void set(long index, T s) throws IOException {
         if (index > numEntriesInFile) {
             throw new IndexOutOfBoundsException(
                     "Attempted to access element out of bounds.");
@@ -123,10 +128,10 @@ public class LRUCache {
         int indexInBlock = (int) (index % blockSize);
         if (cache.containsKey(blockNumber)) {
             hits++;
-            cache.get(blockNumber).set(indexInBlock, s);
+            cache.get(blockNumber).set(indexInBlock, s.toString());
         } else {
             List<String> block = pullBlock(blockNumber);
-            block.set(indexInBlock, s);
+            block.set(indexInBlock, s.toString());
             cache.put(blockNumber, block);
             if (cache.getEldestEntry() != null) {
                 writeEntries(cache.getEldestEntry().getKey(), cache
