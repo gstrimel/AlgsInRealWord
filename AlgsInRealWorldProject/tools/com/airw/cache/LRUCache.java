@@ -1,30 +1,27 @@
 package com.airw.cache;
+
 import java.io.BufferedReader;
-import java.io.DataInputStream;
+import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.LineNumberReader;
-import java.io.RandomAccessFile;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
 
 public class LRUCache {
 
     private int blockSize; // Number of entries in a block.
     private int numBlocksInCache; // Number of blocks in the cache.
-    private int numEntriesInFile;  
-    private int lineSizeInBytes;
-    private RandomAccessFile file;
-    private Map<Long, List<String>> cache;
+    private int numEntriesInFile;
+    private LRUMap<Long, List<String>> cache;
     private long hits;
     private long accesses;
+    private String fileName;
+    private int numBlocksPerSubFile;
 
     /**
      * Constructor for LRUCache.
@@ -43,6 +40,8 @@ public class LRUCache {
         this.blockSize = blockSize;
         this.numBlocksInCache = numBlocksInCache;
 
+        this.fileName = fileName.replace(".txt", "");
+
         // Count the number of lines in the file.
         LineNumberReader lnr = new LineNumberReader(new FileReader(new File(
                 fileName)));
@@ -50,31 +49,29 @@ public class LRUCache {
         this.numEntriesInFile = lnr.getLineNumber();
         lnr.close();
 
-        // Count the number of bytes in the first line.
-        FileInputStream fstream = new FileInputStream("textfile.txt");
-        DataInputStream in = new DataInputStream(fstream);
-        BufferedReader br = new BufferedReader(new InputStreamReader(in));
-        String strLine = br.readLine() + "\n";
-        lineSizeInBytes = strLine.length();
-        br.close();
+        numBlocksPerSubFile = (int) Math.ceil(Math
+                .sqrt((double) numEntriesInFile) / blockSize);
+        numBlocksPerSubFile = Math.max(numBlocksPerSubFile, 1);
 
-        // Open ultimate file to read and write from.
-        file = new RandomAccessFile(fileName, "rw");
+        cache = new LRUMap<Long, List<String>>(numBlocksInCache, .75F, true);
 
-        cache = new LinkedHashMap<Long, List<String>>(numBlocksInCache + 1,
-                .75F, true) {
-            private static final long serialVersionUID = 1L;
-
-            // This method is called just after a new entry has been added.
-            public boolean removeEldestEntry(
-                    Map.Entry<Long, List<String>> eldest) {
-                return size() > numBlocksInCache;
-            }
-        };
+        createAllSubFiles();
 
         // Set the hits.
         hits = 0;
         accesses = 0;
+    }
+
+    /**
+     * Cleans up the process. Flushes the cache and deletes all temporary files.
+     * 
+     * @throws IOException
+     */
+    public void close() throws IOException {
+        for (Map.Entry<Long, List<String>> entry : cache.entrySet()) {
+            writeEntries(entry.getKey(), entry.getValue());
+        }
+        mergeAllSubFiles();
     }
 
     /**
@@ -97,14 +94,12 @@ public class LRUCache {
             hits++;
             return cache.get(blockNumber).get(indexInBlock);
         } else {
-            if (cache.size() == numBlocksInCache) {
-                // Record entry changes because its getting kicked out.
-                Long key = getEldestKey();
-                List<String> eldestEntries = cache.get(key);
-                writeEntries(blockNumber, eldestEntries);
-            }
             List<String> block = pullBlock(blockNumber);
             cache.put(blockNumber, block);
+            if (cache.getEldestEntry() != null) {
+                writeEntries(cache.getEldestEntry().getKey(), cache
+                        .getEldestEntry().getValue());
+            }
             return block.get(indexInBlock);
         }
     }
@@ -130,15 +125,13 @@ public class LRUCache {
             hits++;
             cache.get(blockNumber).set(indexInBlock, s);
         } else {
-            if (cache.size() == numBlocksInCache) {
-                // Record entry changes because its getting kicked out.
-                Long key = getEldestKey();
-                List<String> eldestEntries = cache.get(key);
-                writeEntries(blockNumber, eldestEntries);
-            }
             List<String> block = pullBlock(blockNumber);
             block.set(indexInBlock, s);
             cache.put(blockNumber, block);
+            if (cache.getEldestEntry() != null) {
+                writeEntries(cache.getEldestEntry().getKey(), cache
+                        .getEldestEntry().getValue());
+            }
         }
     }
 
@@ -151,12 +144,27 @@ public class LRUCache {
      * @throws IOException
      */
     private List<String> pullBlock(long blockNumber) throws IOException {
-        long beginIndex = blockNumber * blockSize;
-        List<String> block = new ArrayList<String>();
-        for (long i = beginIndex; i < beginIndex + blockSize
-                && i < numEntriesInFile; i++) {
-            block.add(readFromFile(i));
+        int subFileNum = (int) (blockNumber / (numBlocksPerSubFile));
+        int blockIndexInFile = (int) (blockNumber % numBlocksPerSubFile);
+        String subFileName = fileName + subFileNum + ".txt";
+
+        File file = new File(subFileName);
+        BufferedReader br = new BufferedReader(new FileReader(file));
+        // Skip first few lines of file.
+        for (int i = 0; i < blockIndexInFile * blockSize; i++) {
+            br.readLine();
         }
+        // Read block.
+        List<String> block = new ArrayList<String>();
+        String line;
+        for (int i = 0; i < blockSize; i++) {
+            line = br.readLine();
+            if (line == null) {
+                break;
+            }
+            block.add(line);
+        }
+        br.close();
         return block;
     }
 
@@ -171,11 +179,113 @@ public class LRUCache {
      */
     private void writeEntries(long blockNumber, List<String> entries)
             throws IOException {
-        long elemIndexNum = blockNumber * blockSize;
-        for (String entry : entries) {
-            writeToFile(entry, elemIndexNum);
-        }
+        int subFileNum = (int) (blockNumber / (numBlocksPerSubFile));
+        int blockIndexInFile = (int) (blockNumber % numBlocksPerSubFile);
+        String subFileName = fileName + subFileNum;
+        String copyFileName = copyFile(subFileName);
 
+        File copyFile = new File(copyFileName);
+        BufferedReader br = new BufferedReader(new FileReader(copyFile));
+        FileWriter fw = new FileWriter(subFileName + ".txt");
+        BufferedWriter bw = new BufferedWriter(fw);
+        // Copy first few lines of file.
+        for (int i = 0; i < blockIndexInFile * blockSize; i++) {
+            bw.write(br.readLine());
+            bw.newLine();
+        }
+        // Write changes block.
+        for (int i = 0; i < entries.size(); i++) {
+            br.readLine();
+            bw.write(entries.get(i));
+            bw.newLine();
+        }
+        String line;
+        while ((line = br.readLine()) != null) {
+            bw.write(line);
+            bw.newLine();
+        }
+        br.close();
+        bw.close();
+
+        copyFile.delete();
+    }
+
+    /**
+     * Copy's the contents of a file to a new file of the same name but with
+     * "copy" appended to the name. Returns this new file name.
+     * 
+     * @param subFileName
+     *            The base file name.
+     * @return The copy file name.
+     * @throws IOException
+     */
+    private String copyFile(String subFileName) throws IOException {
+        String copyFileName = subFileName + "copy.txt";
+        BufferedReader br = new BufferedReader(new FileReader(new File(
+                subFileName + ".txt")));
+        FileWriter fw = new FileWriter(copyFileName);
+        BufferedWriter bw = new BufferedWriter(fw);
+        String line;
+        while ((line = br.readLine()) != null) {
+            bw.write(line);
+            bw.newLine();
+        }
+        br.close();
+        bw.close();
+        return copyFileName;
+    }
+
+    /**
+     * Creates all necessary sub files for the process.
+     * 
+     * @throws IOException
+     */
+    private void createAllSubFiles() throws IOException {
+        BufferedReader br = new BufferedReader(new FileReader(new File(fileName
+                + ".txt")));
+        for (long i = 0; i < numEntriesInFile; i += (numBlocksPerSubFile * blockSize)) {
+            String subFileName = fileName
+                    + (i / (numBlocksPerSubFile * blockSize)) + ".txt";
+            FileWriter fw = new FileWriter(subFileName);
+            BufferedWriter bw = new BufferedWriter(fw);
+            for (long j = i; j < Math.min(numEntriesInFile, i
+                    + (numBlocksPerSubFile * blockSize)); j++) {
+                String line = br.readLine();
+                bw.write(line);
+                bw.newLine();
+            }
+            bw.close();
+        }
+        br.close();
+    }
+
+    /**
+     * Takes the results of all the subfiles and merges them back into the
+     * original file. Called on cleanup.
+     * 
+     * @throws IOException
+     */
+    private void mergeAllSubFiles() throws IOException {
+        File oldFile = new File(fileName + ".txt");
+        oldFile.delete();
+
+        FileWriter fw = new FileWriter(oldFile.getAbsolutePath());
+        BufferedWriter bw = new BufferedWriter(fw);
+
+        for (long i = 0; i < numEntriesInFile; i += (numBlocksPerSubFile * blockSize)) {
+            String subFileName = fileName
+                    + (i / (numBlocksPerSubFile * blockSize)) + ".txt";
+            File subFile = new File(subFileName);
+            BufferedReader br = new BufferedReader(new FileReader(subFile));
+            for (long j = i; j < Math.min(numEntriesInFile, i
+                    + (numBlocksPerSubFile * blockSize)); j++) {
+                bw.write(br.readLine());
+                bw.newLine();
+            }
+            br.close();
+            subFile.delete();
+        }
+        bw.close();
     }
 
     /**
@@ -183,61 +293,6 @@ public class LRUCache {
      * 
      * @return The key of the eldest element in the list.
      */
-    private Long getEldestKey() {
-        final Set<Entry<Long, List<String>>> mapValues = cache.entrySet();
-        final int maplength = mapValues.size();
-        @SuppressWarnings("unchecked")
-        final Entry<Long, List<String>>[] ray = new Entry[maplength];
-        mapValues.toArray(ray);
-        return ray[ray.length - 1].getKey();
-    }
-
-    /**
-     * Reads an entry from the file given its index.
-     * 
-     * @param index
-     *            The index of the element to read.
-     * @return The string of the index that was read.
-     * @throws IOException
-     */
-    private String readFromFile(long index) throws IOException {
-        long position = index * lineSizeInBytes;
-        file.seek(position);
-        byte[] bytes = new byte[lineSizeInBytes - 1]; // Ignore the "\n" at the
-                                                      // end of the line.
-        file.read(bytes);
-        String data = bytes.toString();
-        while (data.charAt(data.length() - 1) != ' ') { // Strip off the
-                                                        // remaining padding.
-            data = data.substring(data.length() - 2, data.length() - 1);
-        }
-        return data;
-    }
-
-    /**
-     * Reads an entry from the file given its index.
-     * 
-     * @param data
-     *            The data to be written.
-     * @param index
-     *            The index of the element to read.
-     * @throws IOException
-     */
-    private void writeToFile(String data, long index) throws IOException {
-        if (data.length() > lineSizeInBytes - 1) {
-            throw new IOException(
-                    "Tried to write a string which was too large.");
-        }
-        String line = data;
-        while (line.length() < lineSizeInBytes - 1) {
-            line += " ";
-        }
-        line += "\n";
-        long position = index * lineSizeInBytes;
-        file.seek(position);
-        file.write(line.getBytes());
-    }
-
     public int fileSize() {
         return numEntriesInFile;
     }
@@ -252,6 +307,40 @@ public class LRUCache {
 
     public long getAccesses() {
         return accesses;
+    }
+
+    /**
+     * Our LRU map.
+     * 
+     * @param <K>
+     *            The key object type.
+     * @param <V>
+     *            The value object type.
+     */
+    public class LRUMap<K, V> extends LinkedHashMap<K, V> {
+
+        /**
+         * 
+         */
+        private static final long serialVersionUID = 1L;
+        private Map.Entry<K, V> eldest;
+
+        public LRUMap(int initialCapacity, float loadFactor, boolean accessOrder) {
+            super(initialCapacity, loadFactor, accessOrder);
+            this.eldest = null;
+        }
+
+        @Override
+        public boolean removeEldestEntry(Map.Entry<K, V> eldest) {
+            if (size() > numBlocksInCache) {
+                this.eldest = eldest;
+            }
+            return size() > numBlocksInCache;
+        }
+
+        public Map.Entry<K, V> getEldestEntry() {
+            return eldest;
+        }
     }
 
 }
