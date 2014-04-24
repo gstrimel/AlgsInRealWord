@@ -263,12 +263,12 @@ public class LRUCache {
                     + (numBlocksPerSubFile * blockSize)); j++) {
                 String line;
                 if (endOfFileReached) {
-                    line = "";
+                    line = "0";
                 } else {
                     line = br.readLine();
                     if (line == null) {
                         endOfFileReached = true;
-                        line = "";
+                        line = "0";
                     }
                 }
                 bw.write(line);
@@ -337,6 +337,10 @@ public class LRUCache {
 
     public long totalAccessableSize() {
         return numEntriesWithExta;
+    }
+    
+    public long getNumBlocksInCache() {
+    	return numBlocksInCache;
     }
 
     /**
