@@ -12,9 +12,8 @@ import com.airw.framework.CacheObjectFactory;
 public class QuickSort<T extends Comparable<T>> extends Sort<T> {
 
     public QuickSort(String fileName, CacheObjectFactory<T> cof, int blockSize,
-            int numBlocksInCache, double extraSpaceMultiplier)
-            throws IOException {
-        super(fileName, cof, blockSize, numBlocksInCache, extraSpaceMultiplier);
+            int numBlocksInCache) throws IOException {
+        super(fileName, cof, blockSize, numBlocksInCache, 0.0);
     }
 
     @Override
