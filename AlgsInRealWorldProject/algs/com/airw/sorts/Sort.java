@@ -16,8 +16,10 @@ public abstract class Sort<T extends Comparable<T>> {
     protected LRUCache<T> cache;
 
     public Sort(String fileName, CacheObjectFactory<T> cof, int blockSize,
-            final int numBlocksInCache) throws IOException {
-        cache = new LRUCache<T>(fileName, cof, blockSize, numBlocksInCache);
+            final int numBlocksInCache, double extraSpaceMultiplier)
+            throws IOException {
+        cache = new LRUCache<T>(fileName, cof, blockSize, numBlocksInCache,
+                extraSpaceMultiplier);
     }
 
     protected abstract void sortCore() throws IOException;

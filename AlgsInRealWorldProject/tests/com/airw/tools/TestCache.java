@@ -34,7 +34,7 @@ public class TestCache {
         bw.close();
 
         LRUCache<Integer> lru = new LRUCache<Integer>(testFile.getAbsolutePath(), new CacheIntegerFactory(), blockSize, numBlocksInCache
-                );
+                ,0.0);
 
         List<Integer> accesses = new LinkedList<Integer>();
         for (int i = 0; i < 10 * fileSize; i++) {

@@ -25,6 +25,7 @@ public class LRUCache<T extends Comparable<T>> {
     private String fileName;
     private int numBlocksPerSubFile;
     private CacheObjectFactory<T> cacheObjectFactory;
+    private long numEntriesWithExta;
 
     /**
      * Constructor for LRUCache.
@@ -38,21 +39,31 @@ public class LRUCache<T extends Comparable<T>> {
      * @throws IOException
      *             Thrown on any error opening and scanning file.
      */
-    public LRUCache(String fileName, CacheObjectFactory<T> cacheObjectFactory, int blockSize, final int numBlocksInCache)
-            throws IOException {
+    public LRUCache(String fileName, CacheObjectFactory<T> cacheObjectFactory,
+            int blockSize, final int numBlocksInCache,
+            double extraSpaceMultiplier) throws IOException {
+        if (extraSpaceMultiplier < 0.0) {
+            throw new IllegalArgumentException(
+                    "Extra space must be nonnegative.");
+        }
+
         this.blockSize = blockSize;
         this.numBlocksInCache = numBlocksInCache;
 
         this.fileName = fileName.replace(".txt", "");
 
         this.cacheObjectFactory = cacheObjectFactory;
-        
+
         // Count the number of lines in the file.
         LineNumberReader lnr = new LineNumberReader(new FileReader(new File(
                 fileName)));
         lnr.skip(Long.MAX_VALUE);
         this.numEntriesInFile = lnr.getLineNumber();
         lnr.close();
+
+        // Calculate extra space needed.
+        this.numEntriesWithExta = numEntriesInFile
+                + (long) Math.ceil(numEntriesInFile * extraSpaceMultiplier);
 
         numBlocksPerSubFile = (int) Math.ceil(Math
                 .sqrt((double) numEntriesInFile) / blockSize);
@@ -88,7 +99,7 @@ public class LRUCache<T extends Comparable<T>> {
      * @throws IOException
      */
     public T get(long index) throws IOException {
-        if (index > numEntriesInFile) {
+        if (index >= numEntriesWithExta) {
             throw new IndexOutOfBoundsException(
                     "Attempted to access element out of bounds.");
         }
@@ -97,7 +108,8 @@ public class LRUCache<T extends Comparable<T>> {
         int indexInBlock = (int) (index % blockSize);
         if (cache.containsKey(blockNumber)) {
             hits++;
-            return cacheObjectFactory.createCacheObject(cache.get(blockNumber).get(indexInBlock));
+            return cacheObjectFactory.createCacheObject(cache.get(blockNumber)
+                    .get(indexInBlock));
         } else {
             List<String> block = pullBlock(blockNumber);
             cache.put(blockNumber, block);
@@ -105,7 +117,8 @@ public class LRUCache<T extends Comparable<T>> {
                 writeEntries(cache.getEldestEntry().getKey(), cache
                         .getEldestEntry().getValue());
             }
-            return  cacheObjectFactory.createCacheObject(block.get(indexInBlock));
+            return cacheObjectFactory
+                    .createCacheObject(block.get(indexInBlock));
         }
     }
 
@@ -119,7 +132,7 @@ public class LRUCache<T extends Comparable<T>> {
      * @throws IOException
      */
     public void set(long index, T s) throws IOException {
-        if (index > numEntriesInFile) {
+        if (index >= numEntriesWithExta) {
             throw new IndexOutOfBoundsException(
                     "Attempted to access element out of bounds.");
         }
@@ -248,14 +261,24 @@ public class LRUCache<T extends Comparable<T>> {
     private void createAllSubFiles() throws IOException {
         BufferedReader br = new BufferedReader(new FileReader(new File(fileName
                 + ".txt")));
-        for (long i = 0; i < numEntriesInFile; i += (numBlocksPerSubFile * blockSize)) {
+        boolean endOfFileReached = false;
+        for (long i = 0; i < numEntriesWithExta; i += (numBlocksPerSubFile * blockSize)) {
             String subFileName = fileName
                     + (i / (numBlocksPerSubFile * blockSize)) + ".txt";
             FileWriter fw = new FileWriter(subFileName);
             BufferedWriter bw = new BufferedWriter(fw);
-            for (long j = i; j < Math.min(numEntriesInFile, i
+            for (long j = i; j < Math.min(numEntriesWithExta, i
                     + (numBlocksPerSubFile * blockSize)); j++) {
-                String line = br.readLine();
+                String line;
+                if (endOfFileReached) {
+                    line = "";
+                } else {
+                    line = br.readLine();
+                    if (line == null) {
+                        endOfFileReached = true;
+                        line = "";
+                    }
+                }
                 bw.write(line);
                 bw.newLine();
             }
@@ -277,17 +300,19 @@ public class LRUCache<T extends Comparable<T>> {
         FileWriter fw = new FileWriter(oldFile.getAbsolutePath());
         BufferedWriter bw = new BufferedWriter(fw);
 
-        for (long i = 0; i < numEntriesInFile; i += (numBlocksPerSubFile * blockSize)) {
+        for (long i = 0; i < numEntriesWithExta; i += (numBlocksPerSubFile * blockSize)) {
             String subFileName = fileName
                     + (i / (numBlocksPerSubFile * blockSize)) + ".txt";
             File subFile = new File(subFileName);
-            BufferedReader br = new BufferedReader(new FileReader(subFile));
-            for (long j = i; j < Math.min(numEntriesInFile, i
-                    + (numBlocksPerSubFile * blockSize)); j++) {
-                bw.write(br.readLine());
-                bw.newLine();
+            if (i < numEntriesInFile) {
+                BufferedReader br = new BufferedReader(new FileReader(subFile));
+                for (long j = i; j < Math.min(numEntriesInFile, i
+                        + (numBlocksPerSubFile * blockSize)); j++) {
+                    bw.write(br.readLine());
+                    bw.newLine();
+                }
+                br.close();
             }
-            br.close();
             subFile.delete();
         }
         bw.close();
@@ -312,6 +337,14 @@ public class LRUCache<T extends Comparable<T>> {
 
     public long getAccesses() {
         return accesses;
+    }
+
+    public long getBlockSize() {
+        return blockSize;
+    }
+
+    public long totalAccessableSize() {
+        return numEntriesWithExta;
     }
 
     /**

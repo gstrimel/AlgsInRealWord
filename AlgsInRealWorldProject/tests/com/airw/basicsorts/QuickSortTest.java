@@ -30,7 +30,7 @@ public class QuickSortTest {
 
         QuickSort<Integer> qs = new QuickSort<Integer>(
                 testFile.getAbsolutePath(), new CacheIntegerFactory(),
-                blockSize, numBlocksInCache);
+                blockSize, numBlocksInCache, 1.0);
 
         qs.sort();
 

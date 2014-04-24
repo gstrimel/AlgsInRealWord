@@ -6,14 +6,15 @@ import com.airw.framework.CacheObjectFactory;
 
 /**
  * Quick sort so taking into account cache efficiency.
- *
+ * 
  * @param <T>
  */
 public class QuickSort<T extends Comparable<T>> extends Sort<T> {
 
     public QuickSort(String fileName, CacheObjectFactory<T> cof, int blockSize,
-            int numBlocksInCache) throws IOException {
-        super(fileName, cof, blockSize, numBlocksInCache);
+            int numBlocksInCache, double extraSpaceMultiplier)
+            throws IOException {
+        super(fileName, cof, blockSize, numBlocksInCache, extraSpaceMultiplier);
     }
 
     @Override
