@@ -28,9 +28,8 @@ public class QuickSortTest {
         }
         bw.close();
 
-        QuickSort<Integer> qs = new QuickSort<Integer>(
-                testFile.getAbsolutePath(), new CacheIntegerFactory(),
-                blockSize, numBlocksInCache);
+        QuickSort qs = new QuickSort(testFile.getAbsolutePath(), blockSize,
+                numBlocksInCache);
 
         qs.sort();
 

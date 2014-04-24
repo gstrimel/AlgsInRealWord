@@ -12,19 +12,16 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.airw.framework.CacheObjectFactory;
-
-public class LRUCache<T extends Comparable<T>> {
+public class LRUCache {
 
     private int blockSize; // Number of entries in a block.
     private int numBlocksInCache; // Number of blocks in the cache.
     private int numEntriesInFile;
-    private LRUMap<Long, List<String>> cache;
+    private LRUMap<Long, List<Long>> cache;
     private long hits;
     private long accesses;
     private String fileName;
     private int numBlocksPerSubFile;
-    private CacheObjectFactory<T> cacheObjectFactory;
     private long numEntriesWithExta;
 
     /**
@@ -39,8 +36,7 @@ public class LRUCache<T extends Comparable<T>> {
      * @throws IOException
      *             Thrown on any error opening and scanning file.
      */
-    public LRUCache(String fileName, CacheObjectFactory<T> cacheObjectFactory,
-            int blockSize, final int numBlocksInCache,
+    public LRUCache(String fileName, int blockSize, final int numBlocksInCache,
             double extraSpaceMultiplier) throws IOException {
         if (extraSpaceMultiplier < 0.0) {
             throw new IllegalArgumentException(
@@ -51,8 +47,6 @@ public class LRUCache<T extends Comparable<T>> {
         this.numBlocksInCache = numBlocksInCache;
 
         this.fileName = fileName.replace(".txt", "");
-
-        this.cacheObjectFactory = cacheObjectFactory;
 
         // Count the number of lines in the file.
         LineNumberReader lnr = new LineNumberReader(new FileReader(new File(
@@ -69,7 +63,7 @@ public class LRUCache<T extends Comparable<T>> {
                 .sqrt((double) numEntriesInFile) / blockSize);
         numBlocksPerSubFile = Math.max(numBlocksPerSubFile, 1);
 
-        cache = new LRUMap<Long, List<String>>(numBlocksInCache, .75F, true);
+        cache = new LRUMap<Long, List<Long>>(numBlocksInCache, .75F, true);
 
         createAllSubFiles();
 
@@ -84,7 +78,7 @@ public class LRUCache<T extends Comparable<T>> {
      * @throws IOException
      */
     public void close() throws IOException {
-        for (Map.Entry<Long, List<String>> entry : cache.entrySet()) {
+        for (Map.Entry<Long, List<Long>> entry : cache.entrySet()) {
             writeEntries(entry.getKey(), entry.getValue());
         }
         mergeAllSubFiles();
@@ -98,7 +92,7 @@ public class LRUCache<T extends Comparable<T>> {
      * @return The element at this index.
      * @throws IOException
      */
-    public T get(long index) throws IOException {
+    public Long get(long index) throws IOException {
         if (index >= numEntriesWithExta) {
             throw new IndexOutOfBoundsException(
                     "Attempted to access element out of bounds.");
@@ -108,17 +102,15 @@ public class LRUCache<T extends Comparable<T>> {
         int indexInBlock = (int) (index % blockSize);
         if (cache.containsKey(blockNumber)) {
             hits++;
-            return cacheObjectFactory.createCacheObject(cache.get(blockNumber)
-                    .get(indexInBlock));
+            return cache.get(blockNumber).get(indexInBlock);
         } else {
-            List<String> block = pullBlock(blockNumber);
+            List<Long> block = pullBlock(blockNumber);
             cache.put(blockNumber, block);
             if (cache.getEldestEntry() != null) {
                 writeEntries(cache.getEldestEntry().getKey(), cache
                         .getEldestEntry().getValue());
             }
-            return cacheObjectFactory
-                    .createCacheObject(block.get(indexInBlock));
+            return block.get(indexInBlock);
         }
     }
 
@@ -131,7 +123,7 @@ public class LRUCache<T extends Comparable<T>> {
      *            The string we are setting the index to.
      * @throws IOException
      */
-    public void set(long index, T s) throws IOException {
+    public void set(long index, Long v) throws IOException {
         if (index >= numEntriesWithExta) {
             throw new IndexOutOfBoundsException(
                     "Attempted to access element out of bounds.");
@@ -141,10 +133,10 @@ public class LRUCache<T extends Comparable<T>> {
         int indexInBlock = (int) (index % blockSize);
         if (cache.containsKey(blockNumber)) {
             hits++;
-            cache.get(blockNumber).set(indexInBlock, s.toString());
+            cache.get(blockNumber).set(indexInBlock, v);
         } else {
-            List<String> block = pullBlock(blockNumber);
-            block.set(indexInBlock, s.toString());
+            List<Long> block = pullBlock(blockNumber);
+            block.set(indexInBlock, v);
             cache.put(blockNumber, block);
             if (cache.getEldestEntry() != null) {
                 writeEntries(cache.getEldestEntry().getKey(), cache
@@ -161,7 +153,7 @@ public class LRUCache<T extends Comparable<T>> {
      * @return The block pulled from file.
      * @throws IOException
      */
-    private List<String> pullBlock(long blockNumber) throws IOException {
+    private List<Long> pullBlock(long blockNumber) throws IOException {
         int subFileNum = (int) (blockNumber / (numBlocksPerSubFile));
         int blockIndexInFile = (int) (blockNumber % numBlocksPerSubFile);
         String subFileName = fileName + subFileNum + ".txt";
@@ -173,14 +165,14 @@ public class LRUCache<T extends Comparable<T>> {
             br.readLine();
         }
         // Read block.
-        List<String> block = new ArrayList<String>();
+        List<Long> block = new ArrayList<Long>();
         String line;
         for (int i = 0; i < blockSize; i++) {
             line = br.readLine();
             if (line == null) {
                 break;
             }
-            block.add(line);
+            block.add(Long.parseLong(line));
         }
         br.close();
         return block;
@@ -195,7 +187,7 @@ public class LRUCache<T extends Comparable<T>> {
      *            The entries to write.
      * @throws IOException
      */
-    private void writeEntries(long blockNumber, List<String> entries)
+    private void writeEntries(long blockNumber, List<Long> entries)
             throws IOException {
         int subFileNum = (int) (blockNumber / (numBlocksPerSubFile));
         int blockIndexInFile = (int) (blockNumber % numBlocksPerSubFile);
@@ -214,7 +206,7 @@ public class LRUCache<T extends Comparable<T>> {
         // Write changes block.
         for (int i = 0; i < entries.size(); i++) {
             br.readLine();
-            bw.write(entries.get(i));
+            bw.write(entries.get(i).toString());
             bw.newLine();
         }
         String line;

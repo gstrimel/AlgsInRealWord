@@ -2,18 +2,16 @@ package com.airw.sorts;
 
 import java.io.IOException;
 
-import com.airw.framework.CacheObjectFactory;
-
 /**
  * Quick sort so taking into account cache efficiency.
  * 
  * @param <T>
  */
-public class QuickSort<T extends Comparable<T>> extends Sort<T> {
+public class QuickSort extends Sort {
 
-    public QuickSort(String fileName, CacheObjectFactory<T> cof, int blockSize,
-            int numBlocksInCache) throws IOException {
-        super(fileName, cof, blockSize, numBlocksInCache, 0.0);
+    public QuickSort(String fileName, int blockSize, int numBlocksInCache)
+            throws IOException {
+        super(fileName, blockSize, numBlocksInCache, 0.0);
     }
 
     @Override
@@ -30,7 +28,7 @@ public class QuickSort<T extends Comparable<T>> extends Sort<T> {
 
         long pivotIndex = getMedianIndexAsPivotIndex(lowIndex, highIndex);
         // 1) Choose pivot from the sublist
-        T pivot = cache.get(pivotIndex);
+        Long pivot = cache.get(pivotIndex);
         // 2) Swap the pivot to the last item in the array
         swapItemsWithIndices(pivotIndex, highIndex);
 
@@ -83,7 +81,7 @@ public class QuickSort<T extends Comparable<T>> extends Sort<T> {
     // ... since swapping with array is the easiest way to swap two objects
     private void swapItemsWithIndices(long firstItem, long secondItem)
             throws IOException {
-        final T tempItem = cache.get(firstItem);
+        final Long tempItem = cache.get(firstItem);
         cache.set(firstItem, cache.get(secondItem));
         cache.set(secondItem, tempItem);
     }

@@ -3,7 +3,6 @@ package com.airw.sorts;
 import java.io.IOException;
 
 import com.airw.cache.LRUCache;
-import com.airw.framework.CacheObjectFactory;
 
 /**
  * The sort interface. The implementor must implement sortCore only.
@@ -11,14 +10,13 @@ import com.airw.framework.CacheObjectFactory;
  * @param <T>
  *            A comparable.
  */
-public abstract class Sort<T extends Comparable<T>> {
+public abstract class Sort {
 
-    protected LRUCache<T> cache;
+    protected LRUCache cache;
 
-    public Sort(String fileName, CacheObjectFactory<T> cof, int blockSize,
-            final int numBlocksInCache, double extraSpaceMultiplier)
-            throws IOException {
-        cache = new LRUCache<T>(fileName, cof, blockSize, numBlocksInCache,
+    public Sort(String fileName, int blockSize, final int numBlocksInCache,
+            double extraSpaceMultiplier) throws IOException {
+        cache = new LRUCache(fileName, blockSize, numBlocksInCache,
                 extraSpaceMultiplier);
     }
 

@@ -9,7 +9,6 @@ import java.util.LinkedList;
 import java.util.List;
 
 import com.airw.cache.LRUCache;
-import com.airw.framework.CacheIntegerFactory;
 
 /**
  * Simple class to test the caching system. Negates a file with numbers.
@@ -33,18 +32,18 @@ public class TestCache {
         }
         bw.close();
 
-        LRUCache<Integer> lru = new LRUCache<Integer>(testFile.getAbsolutePath(), new CacheIntegerFactory(), blockSize, numBlocksInCache
-                ,0.0);
+        LRUCache lru = new LRUCache(testFile.getAbsolutePath(), blockSize,
+                numBlocksInCache, 0.0);
 
         List<Integer> accesses = new LinkedList<Integer>();
         for (int i = 0; i < 10 * fileSize; i++) {
             accesses.add(i);
         }
         Collections.shuffle(accesses);
-        
-        for(Integer i : accesses){
+
+        for (Integer i : accesses) {
             if (i % 3 == 0) {
-                Integer s = (-(i % fileSize));
+                Long s = (long) (-(i % fileSize));
                 lru.set(i % fileSize, s);
             } else {
                 lru.get(i % fileSize);
