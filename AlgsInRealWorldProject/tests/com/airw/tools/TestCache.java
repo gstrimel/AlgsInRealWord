@@ -8,7 +8,11 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
-import com.airw.cache.LRUCache;
+import com.airw.cache.CacheArray;
+import com.airw.cache.EmptyCacheArray;
+import com.airw.cache.FileCacheArray;
+import com.airw.cache.LRUCCache;
+import com.airw.framework.CacheIntegerFactory;
 
 /**
  * Simple class to test the caching system. Negates a file with numbers.
@@ -32,8 +36,12 @@ public class TestCache {
         }
         bw.close();
 
-        LRUCache lru = new LRUCache(testFile.getAbsolutePath(), blockSize,
-                numBlocksInCache, 0.0);
+        LRUCCache lru = new LRUCCache(blockSize, numBlocksInCache, 20);
+        CacheIntegerFactory cif = new CacheIntegerFactory();
+        CacheArray<IntegerFileObject> array = new FileCacheArray<IntegerFileObject>(
+                cif, testFile.getAbsolutePath(), lru);
+        EmptyCacheArray<IntegerFileObject> array2 = new EmptyCacheArray<IntegerFileObject>(
+                cif, fileSize, lru);
 
         List<Integer> accesses = new LinkedList<Integer>();
         for (int i = 0; i < 10 * fileSize; i++) {
@@ -43,13 +51,16 @@ public class TestCache {
 
         for (Integer i : accesses) {
             if (i % 3 == 0) {
-                Long s = (long) (-(i % fileSize));
-                lru.set(i % fileSize, s);
+                IntegerFileObject s = new IntegerFileObject(-(i % fileSize));
+                array.set(i % fileSize, s);
+                array2.set(i % fileSize, s);
             } else {
-                lru.get(i % fileSize);
+                array.get(i % fileSize);
+                array2.get(i % fileSize);
             }
         }
-        lru.close();
+        array.close();
+        array2.close();
 
     }
 

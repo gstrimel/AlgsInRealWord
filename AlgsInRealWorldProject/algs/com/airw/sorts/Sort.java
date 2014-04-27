@@ -1,38 +1,29 @@
 package com.airw.sorts;
 
 import java.io.IOException;
+import java.util.Comparator;
 
-import com.airw.cache.LRUCache;
+import com.airw.cache.CacheArray;
+import com.airw.cache.CacheObject;
+
 
 /**
  * The sort interface. The implementor must implement sortCore only.
+ * @param <T>
  * 
  * @param <T>
  *            A comparable.
  */
-public abstract class Sort {
+public abstract class Sort<T extends CacheObject> {
 
-    protected LRUCache cache;
-
-    public Sort(String fileName, int blockSize, final int numBlocksInCache,
-            double extraSpaceMultiplier) throws IOException {
-        cache = new LRUCache(fileName, blockSize, numBlocksInCache,
-                extraSpaceMultiplier);
+    protected CacheArray<T> array;
+    protected Comparator<T> comp;
+    
+    public Sort(CacheArray<T> array, Comparator<T> comp){
+        this.array = array;
+        this.comp = comp;
     }
-
-    protected abstract void sortCore() throws IOException;
-
-    public void sort() throws IOException {
-        sortCore();
-        close();
-    }
-
-    private void close() throws IOException {
-        cache.close();
-    }
-
-    public long numElems() {
-        return cache.fileSize();
-    }
+    
+    public abstract void sort() throws IOException;
 
 }

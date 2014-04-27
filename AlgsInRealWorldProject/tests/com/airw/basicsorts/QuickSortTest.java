@@ -6,8 +6,12 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Random;
 
+import com.airw.cache.CacheArray;
+import com.airw.cache.FileCacheArray;
+import com.airw.cache.LRUCCache;
 import com.airw.framework.CacheIntegerFactory;
 import com.airw.sorts.QuickSort;
+import com.airw.tools.IntegerFileObject;
 
 public class QuickSortTest {
 
@@ -17,7 +21,7 @@ public class QuickSortTest {
 
     public static void main(String[] args) throws IOException {
 
-        File testFile = new File("testFileSort.txt");
+        File testFile = new File("testFileSortNew.txt");
         FileWriter fw = new FileWriter(testFile);
         BufferedWriter bw = new BufferedWriter(fw);
         Random gen = new Random();
@@ -27,11 +31,17 @@ public class QuickSortTest {
             bw.newLine();
         }
         bw.close();
+        
+        LRUCCache lru = new LRUCCache(blockSize, numBlocksInCache, 5);
+        CacheIntegerFactory cif = new CacheIntegerFactory();
+        CacheArray<IntegerFileObject> array = new FileCacheArray<IntegerFileObject>(
+                cif, testFile.getAbsolutePath(), lru);
 
-        QuickSort qs = new QuickSort(testFile.getAbsolutePath(), blockSize,
-                numBlocksInCache);
+        QuickSort<IntegerFileObject> qs = new QuickSort<IntegerFileObject>(array, cif.getBasicComparator());
 
         qs.sort();
+        
+        array.close();
 
     }
 }
