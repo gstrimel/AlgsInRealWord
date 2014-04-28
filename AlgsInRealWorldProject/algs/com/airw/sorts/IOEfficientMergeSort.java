@@ -73,7 +73,9 @@ public class IOEfficientMergeSort<T extends CacheObject> extends Sort<T> {
                     (i == K-1 && curPos < lastSubArraySize)) {
                     
                     long index = lowIndex + (i * subArraySize) + curPos;
-                    if(min == null || comp.compare(array.get(index),min) < 0) {
+                    // System.out.printf("lowIndex = %d, i = %d, subArraySize = %d, curPos = %d, K = %d, numElems = %d, index = %d\n", lowIndex, i, subArraySize, curPos, K, numElems, index);
+                    
+                    if(index < array.size() && (min == null || comp.compare(array.get(index),min) < 0)) {
                         min = array.get(index);
                         minSubArray = i;
                     }

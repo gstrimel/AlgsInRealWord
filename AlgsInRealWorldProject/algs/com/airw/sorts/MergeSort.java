@@ -6,6 +6,7 @@ import java.util.Comparator;
 import com.airw.cache.CacheArray;
 import com.airw.cache.CacheObject;
 import com.airw.cache.EmptyCacheArray;
+import com.airw.cache.LRUCCache;
 import com.airw.framework.CacheIntegerFactory;
 import com.airw.tools.IntegerFileObject;
 
@@ -31,6 +32,7 @@ public class MergeSort<T extends CacheObject> extends Sort<T> {
         
         //long subArraySize = 2*cache.getBlockSize();
         // Round k up
+        LRUCCache cache = array.getCache();
         long K = 2; //(cache.cacheSize() + 2*cache.getBlockSize() - 1) / (2*cache.getBlockSize());
         long subArraySize = (long) Math.ceil((double) numElems / K);
         
@@ -47,7 +49,7 @@ public class MergeSort<T extends CacheObject> extends Sort<T> {
         
         EmptyCacheArray<T> mergedArray = new EmptyCacheArray<T>(array.getFactory(), numElems, array.getCache());
         CacheIntegerFactory cif = new CacheIntegerFactory();
-        EmptyCacheArray<IntegerFileObject> curPosition = new EmptyCacheArray<IntegerFileObject>(cif, K, array.getCache());        
+        EmptyCacheArray<IntegerFileObject> curPosition = new EmptyCacheArray<IntegerFileObject>(cif, K, array.getCache());
 
         // Start curPos pointer for each sub-array at location 0
         for (int i = 0; i < K; i++) {
@@ -58,7 +60,7 @@ public class MergeSort<T extends CacheObject> extends Sort<T> {
         
         long p = 0;
         while(p < numElems) {
-            T min = array.get(0);
+            T min = null; //array.get(lowIndex);
             long minSubArray = -1;
             
             // Search for the min element
@@ -70,7 +72,9 @@ public class MergeSort<T extends CacheObject> extends Sort<T> {
                     (i == K-1 && curPos < lastSubArraySize)) {
                     
                     long index = lowIndex + (i * subArraySize) + curPos;
-                    if(comp.compare(array.get(index),min) < 0) {
+                    // System.out.printf("lowIndex = %d, i = %d, subArraySize = %d, curPos = %d, K = %d, numElems = %d, index = %d\n", lowIndex, i, subArraySize, curPos, K, numElems, index);
+                    
+                    if(index < array.size() && (min == null || comp.compare(array.get(index),min) < 0)) {
                         min = array.get(index);
                         minSubArray = i;
                     }
@@ -163,4 +167,4 @@ public class MergeSort<T extends CacheObject> extends Sort<T> {
         return lowIndex + ((highIndex - lowIndex) / 2);
     }
 
-}
+}	
