@@ -51,6 +51,10 @@ public abstract class CacheArray<T extends CacheObject> {
     public int getId() {
         return arrayId;
     }
+    
+    public CacheObjectFactory<T> getFactory() {
+    	return objectFact;
+    }
 
     public abstract long size();
 
