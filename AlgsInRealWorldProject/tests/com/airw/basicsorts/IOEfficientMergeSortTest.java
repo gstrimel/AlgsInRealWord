@@ -6,7 +6,13 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Random;
 
+import com.airw.cache.CacheArray;
+import com.airw.cache.FileCacheArray;
+import com.airw.cache.LRUCCache;
+import com.airw.framework.CacheIntegerFactory;
 import com.airw.sorts.IOEfficientMergeSort;
+import com.airw.sorts.QuickSort;
+import com.airw.tools.IntegerFileObject;
 
 public class IOEfficientMergeSortTest {
     private static int fileSize = 1001;
@@ -25,9 +31,15 @@ public class IOEfficientMergeSortTest {
         }
         bw.close();
 
-        IOEfficientMergeSort ms = new IOEfficientMergeSort(testFile.getAbsolutePath(), blockSize,
-                numBlocksInCache);
+        LRUCCache lru = new LRUCCache(blockSize, numBlocksInCache, 5);
+        CacheIntegerFactory cif = new CacheIntegerFactory();
+        CacheArray<IntegerFileObject> array = new FileCacheArray<IntegerFileObject>(
+                cif, testFile.getAbsolutePath(), lru);
+
+        IOEfficientMergeSort<IntegerFileObject> ms = new IOEfficientMergeSort<IntegerFileObject>(array, cif.getBasicComparator());
 
         ms.sort();
+        
+        array.close();
     }
 }
