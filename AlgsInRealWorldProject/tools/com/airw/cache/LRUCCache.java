@@ -205,11 +205,17 @@ public class LRUCCache {
     }
 
     public void dump(CacheArray<?> ca) throws IOException {
+        List<CacheKey> keysToRemove = new LinkedList<CacheKey>();
         for (Entry<CacheKey, List<String>> e : cache.entrySet()) {
             if (e.getKey().getId() == ca.getId()) {
                 writeEntries(ca, e.getKey().getBlockNumber(), e.getValue());
+                keysToRemove.add(e.getKey());
             }
         }
+        for(CacheKey ck : keysToRemove){
+            cache.remove(ck);
+        }
+        //my need to wory about last entry
     }
 
     /**
@@ -295,4 +301,8 @@ public class LRUCCache {
         }
     }
 
+    
+    public List<CacheArray<?>> getCacheArrays(){
+        return cacheArrays;
+    }
 }

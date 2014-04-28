@@ -50,7 +50,7 @@ public class IOEfficientMergeSort<T extends CacheObject> extends Sort<T> {
         
         EmptyCacheArray<T> mergedArray = new EmptyCacheArray<T>(array.getFactory(), numElems, array.getCache());
         CacheIntegerFactory cif = new CacheIntegerFactory();
-        EmptyCacheArray<IntegerFileObject> curPosition = new EmptyCacheArray<IntegerFileObject>(cif, K, array.getCache());        
+        EmptyCacheArray<IntegerFileObject> curPosition = new EmptyCacheArray<IntegerFileObject>(cif, K, array.getCache());
 
         // Start curPos pointer for each sub-array at location 0
         for (int i = 0; i < K; i++) {
