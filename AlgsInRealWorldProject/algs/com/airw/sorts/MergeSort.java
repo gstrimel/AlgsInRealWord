@@ -1,19 +1,25 @@
 package com.airw.sorts;
 
 import java.io.IOException;
+import java.util.Comparator;
 
-public class MergeSort extends Sort {
+import com.airw.cache.CacheArray;
+import com.airw.cache.CacheObject;
+import com.airw.cache.EmptyCacheArray;
+import com.airw.framework.CacheIntegerFactory;
+import com.airw.tools.IntegerFileObject;
 
-    public MergeSort(String fileName,
-            int blockSize, int numBlocksInCache) throws IOException {
-        super(fileName, blockSize, numBlocksInCache, 2.0);
-    }
+public class MergeSort<T extends CacheObject> extends Sort<T> {
 
-    @Override
-    protected void sortCore() throws IOException {
-        mergeAux(0, numElems());
+	public MergeSort(CacheArray<T> array, Comparator<T> comp) {
+        super(array, comp);
     }
     
+	@Override
+	public void sort() throws IOException {
+		mergeAux(0, array.size());
+	}	
+	
     // Merges elements from lowIndex to highIndex - 1.
     public void mergeAux(long lowIndex, long highIndex) throws IOException {
         long numElems = highIndex - lowIndex;
@@ -37,62 +43,54 @@ public class MergeSort extends Sort {
         }
 
         // k-way merge
+
         
+        EmptyCacheArray<T> mergedArray = new EmptyCacheArray<T>(array.getFactory(), numElems, array.getCache());
+        CacheIntegerFactory cif = new CacheIntegerFactory();
+        EmptyCacheArray<IntegerFileObject> curPosition = new EmptyCacheArray<IntegerFileObject>(cif, K, array.getCache());        
+
         // Start curPos pointer for each sub-array at location 0
         for (int i = 0; i < K; i++) {
-            curPosSet(i, 0);
+            curPosition.set(i, new IntegerFileObject(0));
         }
         
         long lastSubArraySize = numElems - subArraySize*(K-1);
-                
+        
         long p = 0;
         while(p < numElems) {
-            long min = Long.MAX_VALUE;
+            T min = array.get(0);
             long minSubArray = -1;
             
             // Search for the min element
             for (int i = 0; i < K; i++) {
-                long curPos = curPosGet(i);
+                int curPos = curPosition.get(i).valueOf();
                 
                 // If we haven't run off the end of the subarray
                 if((i < K-1 && curPos < subArraySize) ||
                     (i == K-1 && curPos < lastSubArraySize)) {
                     
                     long index = lowIndex + (i * subArraySize) + curPos;
-                    if(cache.get(index) < min) {
-                        min = cache.get(index);
+                    if(comp.compare(array.get(index),min) < 0) {
+                        min = array.get(index);
                         minSubArray = i;
                     }
                 }   
             }
             
-            mergedArraySet(p, min);         
-            curPosSet(minSubArray, curPosGet(minSubArray) + 1);
+            mergedArray.set(p, min);         
+            curPosition.set(minSubArray, new IntegerFileObject(curPosition.get(minSubArray).valueOf() + 1));
             p += 1;
         }
         
         //Copy sorted array back to original location
         for(int i = 0; i < numElems; i++) {
-            cache.set(lowIndex + i, mergedArrayGet(i));
+            array.set(lowIndex + i, mergedArray.get(i));
         }
+        
+        mergedArray.close();
+        curPosition.close();
     }
     
-    private void mergedArraySet(long index, long s) throws IOException {
-        cache.set(numElems() + index, s);
-    }
-    
-    private long mergedArrayGet(long index) throws IOException {
-        return cache.get(numElems() + index);
-    }
-    
-    private void curPosSet(long index, long s) throws IOException {
-        cache.set(2*numElems() + index, s);
-    }
-    
-    private long curPosGet(long index) throws IOException {
-        return cache.get(2*numElems() + index);
-    }   
-
     public void quickAux(long lowIndex, long highIndex) throws IOException {
 
         // at least one item must exist in the array
@@ -102,7 +100,7 @@ public class MergeSort extends Sort {
 
         long pivotIndex = getMedianIndexAsPivotIndex(lowIndex, highIndex);
         // 1) Choose pivot from the sublist
-        long pivot = cache.get(pivotIndex);
+        T pivot = array.get(pivotIndex);
         // 2) Swap the pivot to the last item in the array
         swapItemsWithIndices(pivotIndex, highIndex);
 
@@ -122,19 +120,19 @@ public class MergeSort extends Sort {
         long j = highIndex;
 
         do { // Notice the <j (pivot item is ignored). We stop when both the
-                // counters cross
+             // counters cross
 
             // compareTo will return 0 when it reaches the pivot - will exit
             // loop
             do {
                 i++;
-            } while (cache.get(i).compareTo(pivot) < 0);
-            // we don't have the protection as the previous loop.
+            } while (comp.compare(array.get(i), pivot) < 0);
+            // we dont have the protection as the previous loop.
             // So, add extra condition to prevent 'j' from overflowing outside
             // the current sub array
             do {
                 j--;
-            } while (cache.get(j).compareTo(pivot) > 0 && (j > lowIndex));
+            } while (comp.compare(array.get(j), pivot) > 0 && (j > lowIndex));
 
             if (i < j) {
                 swapItemsWithIndices(i, j);
@@ -147,17 +145,17 @@ public class MergeSort extends Sort {
         // recurse and bring in more hands
 
         quickAux(lowIndex, i - 1); // sort subarray between low index and one
-        // before the pivot
+                                   // before the pivot
         quickAux(i + 1, highIndex); // sort subarray between low index and one
-        // before the pivot
+                                    // before the pivot
     }
 
     // ... since swapping with array is the easiest way to swap two objects
     private void swapItemsWithIndices(long firstItem, long secondItem)
             throws IOException {
-        final long tempItem = cache.get(firstItem);
-        cache.set(firstItem, cache.get(secondItem));
-        cache.set(secondItem, tempItem);
+        final T tempItem = array.get(firstItem);
+        array.set(firstItem, array.get(secondItem));
+        array.set(secondItem, tempItem);
     }
 
     // Variation 1 - chose median as pivot
