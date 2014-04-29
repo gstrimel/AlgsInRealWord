@@ -8,11 +8,12 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
+import com.airw.arrays.EmptyCacheArray;
+import com.airw.arrays.FileCacheArray;
 import com.airw.cache.CacheArray;
-import com.airw.cache.EmptyCacheArray;
-import com.airw.cache.FileCacheArray;
-import com.airw.cache.LRUCCache;
+import com.airw.cache.LRUCache;
 import com.airw.framework.CacheIntegerFactory;
+import com.airw.framework.CacheInteger;
 
 /**
  * Simple class to test the caching system. Negates a file with numbers.
@@ -36,15 +37,15 @@ public class TestCache {
         }
         bw.close();
 
-        LRUCCache lru = new LRUCCache(blockSize, numBlocksInCache, 20);
+        LRUCache lru = new LRUCache(blockSize, numBlocksInCache, 20);
         CacheIntegerFactory cif = new CacheIntegerFactory();
-        CacheArray<IntegerFileObject> array = new FileCacheArray<IntegerFileObject>(
+        CacheArray<CacheInteger> array = new FileCacheArray<CacheInteger>(
                 cif, testFile.getAbsolutePath(), lru);
-        EmptyCacheArray<IntegerFileObject> array2 = new EmptyCacheArray<IntegerFileObject>(
+        EmptyCacheArray<CacheInteger> array2 = new EmptyCacheArray<CacheInteger>(
                 cif, fileSize, lru);
 
         for (int i = 0; i < fileSize; i++) {
-            array2.set(i, new IntegerFileObject(-i));
+            array2.set(i, new CacheInteger(-i));
         }
         
         List<Integer> accesses = new LinkedList<Integer>();

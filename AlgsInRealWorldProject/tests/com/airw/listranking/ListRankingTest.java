@@ -1,3 +1,4 @@
+package com.airw.listranking;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
@@ -8,9 +9,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 
+import com.airw.arrays.FileCacheArray;
 import com.airw.cache.CacheArray;
-import com.airw.cache.FileCacheArray;
-import com.airw.cache.LRUCCache;
+import com.airw.cache.LRUCache;
 import com.airw.framework.ListRankNode;
 import com.airw.framework.ListRankNodeFactory;
 import com.airw.listranking.ListRanking;
@@ -71,7 +72,7 @@ public class ListRankingTest {
         bwEffic.close();
         bwNaive.close();
         
-        LRUCCache lru = new LRUCCache(blockSize, numBlocksInCache, 5);
+        LRUCache lru = new LRUCache(blockSize, numBlocksInCache, 5);
         ListRankNodeFactory cif = new ListRankNodeFactory();
         CacheArray<ListRankNode> arrayEffic = new FileCacheArray<ListRankNode>(
                 cif, testFileEffic.getAbsolutePath(), lru);

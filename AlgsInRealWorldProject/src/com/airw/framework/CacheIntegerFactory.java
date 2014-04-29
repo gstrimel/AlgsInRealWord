@@ -2,20 +2,18 @@ package com.airw.framework;
 
 import java.util.Comparator;
 
-import com.airw.tools.IntegerFileObject;
-
 public class CacheIntegerFactory implements
-        CacheObjectFactory<IntegerFileObject> {
+        CacheObjectFactory<CacheInteger> {
 
     @Override
-    public IntegerFileObject createCacheObject(String s) {
-        return IntegerFileObject.parseInt(s);
+    public CacheInteger createCacheObject(String s) {
+        return CacheInteger.parseInt(s);
     }
 
     @Override
-    public Comparator<IntegerFileObject> getBasicComparator() {
-        return new Comparator<IntegerFileObject>() {
-            public int compare(IntegerFileObject a, IntegerFileObject b) {
+    public Comparator<CacheInteger> getBasicComparator() {
+        return new Comparator<CacheInteger>() {
+            public int compare(CacheInteger a, CacheInteger b) {
                 return Integer.compare(a.valueOf(), b.valueOf());
             }
         };

@@ -3,12 +3,12 @@ package com.airw.sorts;
 import java.io.IOException;
 import java.util.Comparator;
 
+import com.airw.arrays.EmptyCacheArray;
 import com.airw.cache.CacheArray;
 import com.airw.cache.CacheObject;
-import com.airw.cache.EmptyCacheArray;
-import com.airw.cache.LRUCCache;
+import com.airw.cache.LRUCache;
 import com.airw.framework.CacheIntegerFactory;
-import com.airw.tools.IntegerFileObject;
+import com.airw.framework.CacheInteger;
 
 public class IOEfficientMergeSort<T extends CacheObject> extends Sort<T> {
 
@@ -29,7 +29,7 @@ public class IOEfficientMergeSort<T extends CacheObject> extends Sort<T> {
             return;
         }
        
-        LRUCCache cache = array.getCache();
+        LRUCache cache = array.getCache();
         long K = (long) Math.ceil((double) cache.cacheSize() / (2*cache.getBlockSize()));
         
         /*
@@ -84,11 +84,11 @@ public class IOEfficientMergeSort<T extends CacheObject> extends Sort<T> {
         CacheIntegerFactory cif = new CacheIntegerFactory();
         
         // The pointer position for each of the K sub-arrays
-        EmptyCacheArray<IntegerFileObject> curPosition = new EmptyCacheArray<IntegerFileObject>(cif, K, cache);
+        EmptyCacheArray<CacheInteger> curPosition = new EmptyCacheArray<CacheInteger>(cif, K, cache);
 
         // Start curPos pointer for each sub-array at location 0
         for (int i = 0; i < K; i++) {
-            curPosition.set(i, new IntegerFileObject(0));
+            curPosition.set(i, new CacheInteger(0));
         }
         
         long curElem = 0;
@@ -121,7 +121,7 @@ public class IOEfficientMergeSort<T extends CacheObject> extends Sort<T> {
             }
             
             mergedArray.set(curElem, min);         
-            curPosition.set(minSubArray, new IntegerFileObject(curPosition.get(minSubArray).valueOf() + 1));
+            curPosition.set(minSubArray, new CacheInteger(curPosition.get(minSubArray).valueOf() + 1));
             curElem += 1;
         }
         

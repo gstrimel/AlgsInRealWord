@@ -1,4 +1,4 @@
-package com.airw.basicsorts;
+package com.airw.sorts;
 
 import java.io.BufferedWriter;
 import java.io.File;

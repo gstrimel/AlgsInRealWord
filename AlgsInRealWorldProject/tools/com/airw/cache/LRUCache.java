@@ -6,23 +6,22 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.LineNumberReader;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 public class LRUCache {
 
     private int blockSize; // Number of entries in a block.
     private int numBlocksInCache; // Number of blocks in the cache.
-    private int numEntriesInFile;
-    private LRUMap<Long, List<Long>> cache;
+    private LRUMap<CacheKey, List<String>> cache;
+    private List<CacheArray<?>> cacheArrays;
     private long hits;
     private long accesses;
-    private String fileName;
     private int numBlocksPerSubFile;
-    private long numEntriesWithExta;
 
     /**
      * Constructor for LRUCache.
@@ -36,53 +35,28 @@ public class LRUCache {
      * @throws IOException
      *             Thrown on any error opening and scanning file.
      */
-    public LRUCache(String fileName, int blockSize, final int numBlocksInCache,
-            double extraSpaceMultiplier) throws IOException {
-        if (extraSpaceMultiplier < 0.0) {
-            throw new IllegalArgumentException(
-                    "Extra space must be nonnegative.");
-        }
+    public LRUCache(int blockSize, final int numBlocksInCache,
+            int numBlocksPerSubFile) throws IOException {
 
         this.blockSize = blockSize;
         this.numBlocksInCache = numBlocksInCache;
+        this.numBlocksPerSubFile = Math.max(numBlocksPerSubFile, 1);
 
-        this.fileName = fileName.replace(".txt", "");
+        cache = new LRUMap<CacheKey, List<String>>(numBlocksInCache, .75F, true);
 
-        // Count the number of lines in the file.
-        LineNumberReader lnr = new LineNumberReader(new FileReader(new File(
-                fileName)));
-        lnr.skip(Long.MAX_VALUE);
-        this.numEntriesInFile = lnr.getLineNumber();
-        lnr.close();
-
-        // Calculate extra space needed.
-        this.numEntriesWithExta = numEntriesInFile
-                + (long) Math.ceil(numEntriesInFile * extraSpaceMultiplier);
-
-       /* numBlocksPerSubFile = (int) Math.ceil(Math
-                .sqrt((double) numEntriesInFile) / blockSize);*/
-        numBlocksPerSubFile = numBlocksInCache;
-        numBlocksPerSubFile = Math.max(numBlocksPerSubFile, 1);
-
-        cache = new LRUMap<Long, List<Long>>(numBlocksInCache, .75F, true);
-
-        createAllSubFiles();
+        cacheArrays = new LinkedList<CacheArray<?>>();
 
         // Set the hits.
         hits = 0;
         accesses = 0;
     }
 
-    /**
-     * Cleans up the process. Flushes the cache and deletes all temporary files.
-     * 
-     * @throws IOException
-     */
-    public void close() throws IOException {
-        for (Map.Entry<Long, List<Long>> entry : cache.entrySet()) {
-            writeEntries(entry.getKey(), entry.getValue());
-        }
-        mergeAllSubFiles();
+    public void addCacheArray(CacheArray<?> ca) {
+        cacheArrays.add(ca);
+    }
+
+    public void removeCacheArray(CacheArray<?> ca) {
+        cacheArrays.remove(ca);
     }
 
     /**
@@ -93,26 +67,34 @@ public class LRUCache {
      * @return The element at this index.
      * @throws IOException
      */
-    public Long get(long index) throws IOException {
-        if (index >= numEntriesWithExta) {
-            throw new IndexOutOfBoundsException(
-                    "Attempted to access element out of bounds.");
-        }
-        accesses++;
+    public String get(long index, CacheArray<?> ca) throws IOException {
         long blockNumber = index / blockSize;
         int indexInBlock = (int) (index % blockSize);
-        if (cache.containsKey(blockNumber)) {
+        CacheKey key = new CacheKey(ca.getId(), blockNumber);
+        accesses++;
+        if (cache.containsKey(key)) {
             hits++;
-            return cache.get(blockNumber).get(indexInBlock);
+            return cache.get(key).get(indexInBlock);
         } else {
-            List<Long> block = pullBlock(blockNumber);
-            cache.put(blockNumber, block);
+            List<String> block = pullBlock(ca, blockNumber);
+            cache.put(key, block);
             if (cache.getEldestEntry() != null) {
-                writeEntries(cache.getEldestEntry().getKey(), cache
+                CacheKey evicKey = cache.getEldestEntry().getKey();
+                CacheArray<?> evicArray = getArrayMatch(evicKey);
+                writeEntries(evicArray, evicKey.getBlockNumber(), cache
                         .getEldestEntry().getValue());
             }
             return block.get(indexInBlock);
         }
+    }
+
+    private CacheArray<?> getArrayMatch(CacheKey evicKey) {
+        for (CacheArray<?> ca : cacheArrays) {
+            if (ca.getId() == evicKey.getId()) {
+                return ca;
+            }
+        }
+        return null;
     }
 
     /**
@@ -124,23 +106,22 @@ public class LRUCache {
      *            The string we are setting the index to.
      * @throws IOException
      */
-    public void set(long index, Long v) throws IOException {
-        if (index >= numEntriesWithExta) {
-            throw new IndexOutOfBoundsException(
-                    "Attempted to access element out of bounds.");
-        }
+    public void set(long index, String v, CacheArray<?> ca) throws IOException {
         accesses++;
         long blockNumber = index / blockSize;
         int indexInBlock = (int) (index % blockSize);
-        if (cache.containsKey(blockNumber)) {
+        CacheKey key = new CacheKey(ca.getId(), blockNumber);
+        if (cache.containsKey(key)) {
             hits++;
-            cache.get(blockNumber).set(indexInBlock, v);
+            cache.get(key).set(indexInBlock, v);
         } else {
-            List<Long> block = pullBlock(blockNumber);
+            List<String> block = pullBlock(ca, blockNumber);
             block.set(indexInBlock, v);
-            cache.put(blockNumber, block);
+            cache.put(key, block);
             if (cache.getEldestEntry() != null) {
-                writeEntries(cache.getEldestEntry().getKey(), cache
+                CacheKey evicKey = cache.getEldestEntry().getKey();
+                CacheArray<?> evicArray = getArrayMatch(evicKey);
+                writeEntries(evicArray, evicKey.getBlockNumber(), cache
                         .getEldestEntry().getValue());
             }
         }
@@ -154,10 +135,11 @@ public class LRUCache {
      * @return The block pulled from file.
      * @throws IOException
      */
-    private List<Long> pullBlock(long blockNumber) throws IOException {
+    private List<String> pullBlock(CacheArray<?> ca, long blockNumber)
+            throws IOException {
         int subFileNum = (int) (blockNumber / (numBlocksPerSubFile));
         int blockIndexInFile = (int) (blockNumber % numBlocksPerSubFile);
-        String subFileName = fileName + subFileNum + ".txt";
+        String subFileName = ca.getBaseFileName() + "_" + subFileNum + ".txt";
 
         File file = new File(subFileName);
         BufferedReader br = new BufferedReader(new FileReader(file));
@@ -166,14 +148,14 @@ public class LRUCache {
             br.readLine();
         }
         // Read block.
-        List<Long> block = new ArrayList<Long>();
+        List<String> block = new ArrayList<String>();
         String line;
         for (int i = 0; i < blockSize; i++) {
             line = br.readLine();
             if (line == null) {
                 break;
             }
-            block.add(Long.parseLong(line));
+            block.add(line);
         }
         br.close();
         return block;
@@ -188,11 +170,12 @@ public class LRUCache {
      *            The entries to write.
      * @throws IOException
      */
-    private void writeEntries(long blockNumber, List<Long> entries)
-            throws IOException {
+    private void writeEntries(CacheArray<?> ca, long blockNumber,
+            List<String> entries) throws IOException {
         int subFileNum = (int) (blockNumber / (numBlocksPerSubFile));
         int blockIndexInFile = (int) (blockNumber % numBlocksPerSubFile);
-        String subFileName = fileName + subFileNum;
+        String subFileName = ca.getBaseFileName() + "_" + subFileNum;
+
         String copyFileName = copyFile(subFileName);
 
         File copyFile = new File(copyFileName);
@@ -207,7 +190,7 @@ public class LRUCache {
         // Write changes block.
         for (int i = 0; i < entries.size(); i++) {
             br.readLine();
-            bw.write(entries.get(i).toString());
+            bw.write(entries.get(i));
             bw.newLine();
         }
         String line;
@@ -221,6 +204,23 @@ public class LRUCache {
         copyFile.delete();
     }
 
+    public void dump(CacheArray<?> ca) throws IOException {
+        List<CacheKey> keysToRemove = new LinkedList<CacheKey>();
+        for (Entry<CacheKey, List<String>> e : cache.entrySet()) {
+            if (e.getKey().getId() == ca.getId()) {
+                writeEntries(ca, e.getKey().getBlockNumber(), e.getValue());
+                keysToRemove.add(e.getKey());
+            }
+        }
+        for (CacheKey ck : keysToRemove) {
+            cache.remove(ck);
+        }
+        // my need to wory about last entry
+        if (keysToRemove.size() > 0) {
+            cache.nullifyEldest();
+        }
+    }
+
     /**
      * Copy's the contents of a file to a new file of the same name but with
      * "copy" appended to the name. Returns this new file name.
@@ -231,7 +231,7 @@ public class LRUCache {
      * @throws IOException
      */
     private String copyFile(String subFileName) throws IOException {
-        String copyFileName = subFileName + "copy.txt";
+        String copyFileName = subFileName + "_copy.txt";
         BufferedReader br = new BufferedReader(new FileReader(new File(
                 subFileName + ".txt")));
         FileWriter fw = new FileWriter(copyFileName);
@@ -244,80 +244,6 @@ public class LRUCache {
         br.close();
         bw.close();
         return copyFileName;
-    }
-
-    /**
-     * Creates all necessary sub files for the process.
-     * 
-     * @throws IOException
-     */
-    private void createAllSubFiles() throws IOException {
-        BufferedReader br = new BufferedReader(new FileReader(new File(fileName
-                + ".txt")));
-        boolean endOfFileReached = false;
-        for (long i = 0; i < numEntriesWithExta; i += (numBlocksPerSubFile * blockSize)) {
-            String subFileName = fileName
-                    + (i / (numBlocksPerSubFile * blockSize)) + ".txt";
-            FileWriter fw = new FileWriter(subFileName);
-            BufferedWriter bw = new BufferedWriter(fw);
-            for (long j = i; j < Math.min(numEntriesWithExta, i
-                    + (numBlocksPerSubFile * blockSize)); j++) {
-                String line;
-                if (endOfFileReached) {
-                    line = "0";
-                } else {
-                    line = br.readLine();
-                    if (line == null) {
-                        endOfFileReached = true;
-                        line = "0";
-                    }
-                }
-                bw.write(line);
-                bw.newLine();
-            }
-            bw.close();
-        }
-        br.close();
-    }
-
-    /**
-     * Takes the results of all the subfiles and merges them back into the
-     * original file. Called on cleanup.
-     * 
-     * @throws IOException
-     */
-    private void mergeAllSubFiles() throws IOException {
-        File oldFile = new File(fileName + ".txt");
-        oldFile.delete();
-
-        FileWriter fw = new FileWriter(oldFile.getAbsolutePath());
-        BufferedWriter bw = new BufferedWriter(fw);
-
-        for (long i = 0; i < numEntriesWithExta; i += (numBlocksPerSubFile * blockSize)) {
-            String subFileName = fileName
-                    + (i / (numBlocksPerSubFile * blockSize)) + ".txt";
-            File subFile = new File(subFileName);
-            if (i < numEntriesInFile) {
-                BufferedReader br = new BufferedReader(new FileReader(subFile));
-                for (long j = i; j < Math.min(numEntriesInFile, i
-                        + (numBlocksPerSubFile * blockSize)); j++) {
-                    bw.write(br.readLine());
-                    bw.newLine();
-                }
-                br.close();
-            }
-            subFile.delete();
-        }
-        bw.close();
-    }
-
-    /**
-     * Gets the key of the eldest element in the list.
-     * 
-     * @return The key of the eldest element in the list.
-     */
-    public int fileSize() {
-        return numEntriesInFile;
     }
 
     public int cacheSize() {
@@ -336,12 +262,12 @@ public class LRUCache {
         return blockSize;
     }
 
-    public long totalAccessableSize() {
-        return numEntriesWithExta;
-    }
-    
     public long getNumBlocksInCache() {
-    	return numBlocksInCache;
+        return numBlocksInCache;
+    }
+
+    public long numBlocksPerSubFile() {
+        return numBlocksPerSubFile;
     }
 
     /**
@@ -376,6 +302,13 @@ public class LRUCache {
         public Map.Entry<K, V> getEldestEntry() {
             return eldest;
         }
+
+        public void nullifyEldest() {
+            this.eldest = null;
+        }
     }
 
+    public List<CacheArray<?>> getCacheArrays() {
+        return cacheArrays;
+    }
 }

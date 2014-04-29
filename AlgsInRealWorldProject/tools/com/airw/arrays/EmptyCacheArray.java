@@ -1,10 +1,13 @@
-package com.airw.cache;
+package com.airw.arrays;
 
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 
+import com.airw.cache.CacheArray;
+import com.airw.cache.CacheObject;
+import com.airw.cache.LRUCache;
 import com.airw.framework.CacheObjectFactory;
 
 public class EmptyCacheArray<T extends CacheObject> extends CacheArray<T> {
@@ -13,7 +16,7 @@ public class EmptyCacheArray<T extends CacheObject> extends CacheArray<T> {
     private long size;
 
     public EmptyCacheArray(CacheObjectFactory<T> objectFact, long size,
-            LRUCCache cache) throws IOException {
+            LRUCache cache) throws IOException {
         super(objectFact, cache);
         baseFileName = "EMPTY_" + getId();
         this.size = size;

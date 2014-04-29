@@ -2,15 +2,16 @@ package com.airw.cache;
 
 import java.io.IOException;
 
+import com.airw.arrays.ArrayIdMaker;
 import com.airw.framework.CacheObjectFactory;
 
 public abstract class CacheArray<T extends CacheObject> {
 
     private CacheObjectFactory<T> objectFact;
-    protected LRUCCache cache;
+    protected LRUCache cache;
     private int arrayId;
 
-    public CacheArray(CacheObjectFactory<T> objectFact, LRUCCache cache)
+    public CacheArray(CacheObjectFactory<T> objectFact, LRUCache cache)
             throws IOException {
         this.objectFact = objectFact;
         this.cache = cache;
@@ -60,7 +61,7 @@ public abstract class CacheArray<T extends CacheObject> {
 
     public abstract String getBaseFileName();
 
-    public LRUCCache getCache() {
+    public LRUCache getCache() {
         return cache;
     }
 }

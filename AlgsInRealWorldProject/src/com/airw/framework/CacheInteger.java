@@ -1,12 +1,12 @@
-package com.airw.tools;
+package com.airw.framework;
 
 import com.airw.cache.CacheObject;
 
-public class IntegerFileObject extends CacheObject {
+public class CacheInteger extends CacheObject {
 
     private Integer n;
 
-    public IntegerFileObject(Integer n) {
+    public CacheInteger(Integer n) {
         this.n = n;
     }
 
@@ -14,8 +14,8 @@ public class IntegerFileObject extends CacheObject {
         return n.intValue();
     }
 
-    public static IntegerFileObject parseInt(String s) {
-        return new IntegerFileObject(Integer.parseInt(s));
+    public static CacheInteger parseInt(String s) {
+        return new CacheInteger(Integer.parseInt(s));
     }
 
     public String toString() {

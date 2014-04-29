@@ -3,8 +3,8 @@ package com.airw.listranking;
 import java.io.IOException;
 import java.util.Random;
 
+import com.airw.arrays.EmptyCacheArray;
 import com.airw.cache.CacheArray;
-import com.airw.cache.EmptyCacheArray;
 import com.airw.framework.ListRankNode;
 import com.airw.framework.ListRankNodeFactory;
 import com.airw.sorts.QuickSort;

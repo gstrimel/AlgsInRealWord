@@ -1,4 +1,4 @@
-package com.airw.basicsorts;
+package com.airw.sorts;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -7,12 +7,12 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 
+import com.airw.arrays.FileCacheArray;
 import com.airw.cache.CacheArray;
-import com.airw.cache.FileCacheArray;
-import com.airw.cache.LRUCCache;
+import com.airw.cache.LRUCache;
 import com.airw.framework.CacheIntegerFactory;
+import com.airw.framework.CacheInteger;
 import com.airw.sorts.IOEfficientMergeSort;
-import com.airw.tools.IntegerFileObject;
 
 public class IOEfficientMergeSortTest {
     private static int fileSize = 1001;
@@ -36,12 +36,12 @@ public class IOEfficientMergeSortTest {
         }
         bw.close();
 
-        LRUCCache lru = new LRUCCache(blockSize, numBlocksInCache, 5);
+        LRUCache lru = new LRUCache(blockSize, numBlocksInCache, 5);
         CacheIntegerFactory cif = new CacheIntegerFactory();
-        CacheArray<IntegerFileObject> array = new FileCacheArray<IntegerFileObject>(
+        CacheArray<CacheInteger> array = new FileCacheArray<CacheInteger>(
                 cif, testFile.getAbsolutePath(), lru);
 
-        IOEfficientMergeSort<IntegerFileObject> ms = new IOEfficientMergeSort<IntegerFileObject>(array, cif.getBasicComparator());
+        IOEfficientMergeSort<CacheInteger> ms = new IOEfficientMergeSort<CacheInteger>(array, cif.getBasicComparator());
 
         ms.sort();
         

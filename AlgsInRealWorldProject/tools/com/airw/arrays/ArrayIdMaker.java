@@ -1,4 +1,4 @@
-package com.airw.cache;
+package com.airw.arrays;
 
 public class ArrayIdMaker {
     

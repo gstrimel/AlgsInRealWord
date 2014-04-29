@@ -1,4 +1,4 @@
-package com.airw.cache;
+package com.airw.arrays;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -8,6 +8,9 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.LineNumberReader;
 
+import com.airw.cache.CacheArray;
+import com.airw.cache.CacheObject;
+import com.airw.cache.LRUCache;
 import com.airw.framework.CacheObjectFactory;
 
 public class FileCacheArray<T extends CacheObject> extends CacheArray<T> {
@@ -16,7 +19,7 @@ public class FileCacheArray<T extends CacheObject> extends CacheArray<T> {
     private long size;
 
     public FileCacheArray(CacheObjectFactory<T> objectFact, String fileName,
-            LRUCCache cache) throws IOException {
+            LRUCache cache) throws IOException {
         super(objectFact, cache);
         baseFileName = fileName.replace(".txt", "");
 
