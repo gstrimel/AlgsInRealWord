@@ -15,8 +15,7 @@ public class MergeSort<T extends CacheObject> extends Sort<T> {
 	public MergeSort(CacheArray<T> array, Comparator<T> comp) {
         super(array, comp);
     }
-    
-	@Override
+ 
 	public void sort() throws IOException {
 		mergeAux(0, array.size());
 	}	
@@ -25,55 +24,94 @@ public class MergeSort<T extends CacheObject> extends Sort<T> {
     public void mergeAux(long lowIndex, long highIndex) throws IOException {
         long numElems = highIndex - lowIndex;
         
-        // Just run a quick sort if data can fit in a cache block
         if(numElems == 1) {
             return;
         }
-        
-        //long subArraySize = 2*cache.getBlockSize();
-        // Round k up
+       
         LRUCCache cache = array.getCache();
-        long K = 2; //(cache.cacheSize() + 2*cache.getBlockSize() - 1) / (2*cache.getBlockSize());
-        long subArraySize = (long) Math.ceil((double) numElems / K);
+        long K = 2;
         
-        // Sort each of the subarrays
+        /*
+         * All sub-arrays may not be the same size. Consider K=5, numElems = 4:
+         * maxSubArraySize = ceil(5/4) = 2
+         * 
+         * So our sub-arrays have size [2,1,1,1]
+         */
+        long maxSubArraySize = (long) Math.ceil((double) numElems / K);
+        
+        /*
+         * Calculate the first index for which the sub-array size equals maxSubArraySize-1
+         * 
+         * Invariant: \forall i < firstLowerIndex, size(subarray[i]) == maxSubArraySize
+         *            \forall i >= firstLowerIndex, size(subarray[i]) == maxSubArraySize-1
+         */
+        long firstLowerIndex = K;
+        for(int i = 0; i < K; i++) {
+        	long elemsLeft = numElems - maxSubArraySize*i;
+        	
+        	if(Math.ceil((double) elemsLeft / (K-i)) < maxSubArraySize) {
+        		firstLowerIndex = i;
+        		break;
+        	}
+        }
+        
+        // Sort each of the sub-arrays
+
         long startIndex = lowIndex;
+        int curSubArrayIndex = 0;
+            
         while(startIndex < highIndex) {
-            long endIndex = Math.min(startIndex + subArraySize, highIndex);
+        	long curSubArraySize;
+        	if(curSubArrayIndex < firstLowerIndex) {
+        		curSubArraySize = maxSubArraySize;
+        	} else {
+        		curSubArraySize = maxSubArraySize - 1;
+        	}
+            long endIndex = Math.min(startIndex + curSubArraySize, highIndex);
+            
             mergeAux(startIndex, endIndex);
+            
             startIndex = endIndex;      
+        	curSubArrayIndex += 1;
         }
 
         // k-way merge
-
         
-        EmptyCacheArray<T> mergedArray = new EmptyCacheArray<T>(array.getFactory(), numElems, array.getCache());
+        // Temp storage for merging
+        EmptyCacheArray<T> mergedArray = new EmptyCacheArray<T>(array.getFactory(), numElems, cache);
+        
         CacheIntegerFactory cif = new CacheIntegerFactory();
-        EmptyCacheArray<IntegerFileObject> curPosition = new EmptyCacheArray<IntegerFileObject>(cif, K, array.getCache());
+        
+        // The pointer position for each of the K sub-arrays
+        EmptyCacheArray<IntegerFileObject> curPosition = new EmptyCacheArray<IntegerFileObject>(cif, K, cache);
 
         // Start curPos pointer for each sub-array at location 0
         for (int i = 0; i < K; i++) {
             curPosition.set(i, new IntegerFileObject(0));
         }
         
-        long lastSubArraySize = numElems - subArraySize*(K-1);
-        
-        long p = 0;
-        while(p < numElems) {
-            T min = null; //array.get(lowIndex);
+        long curElem = 0;
+        while(curElem < numElems) {
+            T min = null;
             long minSubArray = -1;
             
             // Search for the min element
             for (int i = 0; i < K; i++) {
                 int curPos = curPosition.get(i).valueOf();
                 
-                // If we haven't run off the end of the subarray
-                if((i < K-1 && curPos < subArraySize) ||
-                    (i == K-1 && curPos < lastSubArraySize)) {
-                    
-                    long index = lowIndex + (i * subArraySize) + curPos;
-                    // System.out.printf("lowIndex = %d, i = %d, subArraySize = %d, curPos = %d, K = %d, numElems = %d, index = %d\n", lowIndex, i, subArraySize, curPos, K, numElems, index);
-                    
+                // If we haven't run off the end of the sub-array
+                if((i < firstLowerIndex && curPos < maxSubArraySize) ||
+                	i >= firstLowerIndex && curPos < maxSubArraySize - 1) {
+                	
+                	// What's the index of the current element in the main array?
+                	long index;
+                	
+                	if(i < firstLowerIndex) {
+                		index = lowIndex + (i * maxSubArraySize) + curPos;
+                	} else {
+                		index = lowIndex + (firstLowerIndex * maxSubArraySize) + (i-firstLowerIndex) * (maxSubArraySize - 1) + curPos;
+                	}
+
                     if(index < array.size() && (min == null || comp.compare(array.get(index),min) < 0)) {
                         min = array.get(index);
                         minSubArray = i;
@@ -81,9 +119,9 @@ public class MergeSort<T extends CacheObject> extends Sort<T> {
                 }   
             }
             
-            mergedArray.set(p, min);         
+            mergedArray.set(curElem, min);         
             curPosition.set(minSubArray, new IntegerFileObject(curPosition.get(minSubArray).valueOf() + 1));
-            p += 1;
+            curElem += 1;
         }
         
         //Copy sorted array back to original location
@@ -167,4 +205,4 @@ public class MergeSort<T extends CacheObject> extends Sort<T> {
         return lowIndex + ((highIndex - lowIndex) / 2);
     }
 
-}	
+}
