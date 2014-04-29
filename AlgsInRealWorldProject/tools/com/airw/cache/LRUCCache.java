@@ -212,10 +212,13 @@ public class LRUCCache {
                 keysToRemove.add(e.getKey());
             }
         }
-        for(CacheKey ck : keysToRemove){
+        for (CacheKey ck : keysToRemove) {
             cache.remove(ck);
         }
-        //my need to wory about last entry
+        // my need to wory about last entry
+        if (keysToRemove.size() > 0) {
+            cache.nullifyEldest();
+        }
     }
 
     /**
@@ -299,10 +302,13 @@ public class LRUCCache {
         public Map.Entry<K, V> getEldestEntry() {
             return eldest;
         }
+
+        public void nullifyEldest() {
+            this.eldest = null;
+        }
     }
 
-    
-    public List<CacheArray<?>> getCacheArrays(){
+    public List<CacheArray<?>> getCacheArrays() {
         return cacheArrays;
     }
 }

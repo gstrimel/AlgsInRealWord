@@ -43,6 +43,10 @@ public class TestCache {
         EmptyCacheArray<IntegerFileObject> array2 = new EmptyCacheArray<IntegerFileObject>(
                 cif, fileSize, lru);
 
+        for (int i = 0; i < fileSize; i++) {
+            array2.set(i, new IntegerFileObject(-i));
+        }
+        
         List<Integer> accesses = new LinkedList<Integer>();
         for (int i = 0; i < 10 * fileSize; i++) {
             accesses.add(i);
@@ -51,9 +55,8 @@ public class TestCache {
 
         for (Integer i : accesses) {
             if (i % 3 == 0) {
-                IntegerFileObject s = new IntegerFileObject(-(i % fileSize));
-                array.set(i % fileSize, s);
-                array2.set(i % fileSize, s);
+                array.set(i % fileSize, array2.get(i % fileSize));
+                array2.set(i % fileSize, array2.get(i % fileSize));
             } else {
                 array.get(i % fileSize);
                 array2.get(i % fileSize);

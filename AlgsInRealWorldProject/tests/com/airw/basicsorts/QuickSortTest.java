@@ -4,7 +4,8 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.Random;
+import java.util.ArrayList;
+import java.util.Collections;
 
 import com.airw.cache.CacheArray;
 import com.airw.cache.FileCacheArray;
@@ -21,13 +22,19 @@ public class QuickSortTest {
 
     public static void main(String[] args) throws IOException {
 
+        ArrayList<Integer> perm = new ArrayList<Integer>();
+        for (int i = 0; i < fileSize; i++) {
+            perm.add(i);
+        }
+        Collections.shuffle(perm);
+        
         File testFile = new File("testFileSortNew.txt");
         FileWriter fw = new FileWriter(testFile);
         BufferedWriter bw = new BufferedWriter(fw);
-        Random gen = new Random();
+        
         // Copy first few lines of file.
         for (int i = 0; i < fileSize; i++) {
-            bw.write("" + gen.nextInt(fileSize));
+            bw.write("" + perm.get(i));
             bw.newLine();
         }
         bw.close();
