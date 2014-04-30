@@ -8,24 +8,24 @@ import com.airw.cache.CacheObject;
 
 /**
  * Quick sort so taking into account cache efficiency.
+ * 
  * @param <T>
  * 
  * @param <T>
  */
 public class QuickSort<T extends CacheObject> extends Sort<T> {
 
-    
     public QuickSort(CacheArray<T> array, Comparator<T> comp) {
         super(array, comp);
     }
 
-
     public void sort() throws IOException {
-        quickAux(0, array.size() - 1);   
+        quickAux(0, array.size() - 1);
     }
-   
 
     public void quickAux(long lowIndex, long highIndex) throws IOException {
+
+        System.out.println(((double) lowIndex) / array.size());
 
         // at least one item must exist in the array
         if (lowIndex >= highIndex) {

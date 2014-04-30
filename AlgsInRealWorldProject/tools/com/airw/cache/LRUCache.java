@@ -258,6 +258,9 @@ public class LRUCache {
         return accesses;
     }
 
+    public long getMisses(){
+        return accesses - hits;
+    }
     public long getBlockSize() {
         return blockSize;
     }
