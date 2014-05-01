@@ -119,6 +119,12 @@ We implemented these algorithms in Java using the following classes: \texttt{IOE
 \label{listrankingio}
 \end{figure}
 
+The constant factor for IO Efficient Mergesort is higher than that of Quicksort. Because of this, these two algorithms perform similarly on small input. The graph of IO Efficient Mergesort Misses, however, is concave --the number of cache misses is leveling off. The graph of Quicksort Misses, however, is convex --the number of cache misses will increase significantly on larger numbers of elements.
+
+It is clear that the selection sort is performing far worse than IO Efficient Mergesort. For 5000 elements, we have 600,000 misses. In the IO Efficient sort, we have only 4500 misses.
+
+Because of the overhead of our cache simulator, we were not able to run simluations with more than 1,000,000 elements.
+
 \subsection{Varying Blocksize}
 
 \begin{figure}[H]  
