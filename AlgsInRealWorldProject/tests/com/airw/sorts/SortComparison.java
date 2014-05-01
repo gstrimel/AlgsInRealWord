@@ -21,12 +21,9 @@ public class SortComparison {
     private static int iterations = 1;
 
     public static void main(String[] args) throws IOException {
+    	int [] Ns = {10,50,100, 500, 1000, 2500, 5000};
 
-        int[] Ns = { 10, 50, 100, 500, 1000, 2500, 5000, 7500, 10000,
-               50000,  100000, 500000, 1000000 };
-        // int []Ns = {100000};
-
-        File recordFile = new File("SortEfficientSortMisses_BlockSize=" + blockSize
+        File recordFile = new File("SortSelectionSortMisses_BlockSize=" + blockSize
                 + "_numBlocksInCache=" + numBlocksInCache + "_blocksInFile"
                 + blocksInFile + ".txt");
         FileWriter recordfw = new FileWriter(recordFile);

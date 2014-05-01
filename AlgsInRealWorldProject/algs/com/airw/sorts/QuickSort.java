@@ -25,7 +25,7 @@ public class QuickSort<T extends CacheObject> extends Sort<T> {
 
     public void quickAux(long lowIndex, long highIndex) throws IOException {
 
-        System.out.println(((double) lowIndex) / array.size());
+//        System.out.println(((double) lowIndex) / array.size());
 
         // at least one item must exist in the array
         if (lowIndex >= highIndex) {
