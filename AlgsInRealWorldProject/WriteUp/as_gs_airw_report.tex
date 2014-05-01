@@ -121,8 +121,25 @@ Hence the the running time can be expressed as teh following recurrence; $R(n) =
 \section{Ranking Simulations}
 
 We implemented both the standard list ranking (\texttt{ListRanking.rankListNaive}) procedure and the cache efficient version
- (\texttt{ListRanking.rankList}) in Java utilizing our\texttt{LRUCache} to emperically test the 
-efficiency of  both methods.
+ (\texttt{ListRanking.rankList}) in Java utilizing our \texttt{LRUCache} to emperically test the 
+efficiency of  both methods.  We ran both methods on randomly permuted lists and compared the cache misses of each.  
+
+Figure \ref{naivelistranking} shows the naive method's performance in terms of cache misses.  As is expected the algorithm has misses which is almost linear with the number of nodes in the list.
+
+\begin{figure}[H]  
+\includegraphics[scale=0.5]{figures/NaiveListRanking.png}
+\caption{Naive List Ranking}
+\label{naivelistranking}
+\end{figure}
+
+As you can see there are more misses initially but the graph is leveling off as the number of elements in the list grows larger.  This behavior is 
+as expected since as $n$ becomes sufficiently large and can no longer fit in memory, the algorithm which utilizes locality more does better.
+
+\begin{figure}[H]  
+\includegraphics[scale=0.5]{figures/EfficientListRanking.png}
+\caption{Efficient List Ranking}
+\label{efficientlistranking}
+\end{figure}
 
 
 \end{document}
