@@ -16,7 +16,7 @@
 \maketitle
 %----------------------------------------------------
 \section{Introduction}
-This section's conte
+In this course project
 
 
 \section{I/O Model}
@@ -209,7 +209,7 @@ Figure \ref{naivelistranking} shows the naive method's performance in terms of c
 \label{naivelistranking}
 \end{figure}
 
-As you can see there are more misses initially but the graph is leveling off as the number of elements in the list grows larger.  This behavior is 
+Figure \ref{efficientlistranking}  demonstrates the behavior of the efficient list ranking algorithm. As you can see there are more misses initially but the graph is leveling off as the number of elements in the list grows larger.  This behavior is 
 as expected since as $n$ becomes sufficiently large and can no longer fit in memory, the algorithm which utilizes locality more does better.
 
 \begin{figure}[H]  
@@ -217,6 +217,21 @@ as expected since as $n$ becomes sufficiently large and can no longer fit in mem
 \caption{Efficient List Ranking}
 \label{efficientlistranking}
 \end{figure}
+
+\section{Conclusion}
+In this project we addressed the idea of locality efficient sorts in the I/O model.  We implemented our own I/O cacheing system to 
+emperically test the behavior of various sorts.   We found that the I/O efficient merge sort asymtotically performs the best over quicksort 
+and the quadratic selection sort.  We showed that the actual behavior in terms of cache misses matched the theoretical predictions of the 
+run time complexity bounds: increasing block size and cache size forced a decrease in cache misses.
+
+We additionally applied our sorting algorithmn to the pointer based problem of list ranking.  We saw that 
+the asymtotical performance was leveling off as in the case with I/O efficient sort.  We also saw that the naive approach had close to a 
+perfectly linear relationship between list size and cache misses which is poor for large inputs which cannot fit in memory.
+
+
+
+
+
 
 
 \end{document}
