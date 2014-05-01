@@ -6,9 +6,9 @@ import java.util.Comparator;
 import com.airw.cache.CacheArray;
 import com.airw.cache.CacheObject;
 
-public class InsertionSort<T extends CacheObject> extends Sort<T> {
+public class SelectionSort<T extends CacheObject> extends Sort<T> {
 
-    public InsertionSort(CacheArray<T> array, Comparator<T> comp) {
+    public SelectionSort(CacheArray<T> array, Comparator<T> comp) {
         super(array, comp);
     }
 
