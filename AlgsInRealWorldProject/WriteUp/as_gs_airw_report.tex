@@ -81,16 +81,16 @@ Note that it may be equally efficient to set k equal to (number of blocks) - 1 -
 
 In analyzing the complexity of our IO Efficient Mergesort, let N be the number of elements to sort, B the block size, and M the total cache size.
 
-In the base case of the IO Efficient Mergesort, we can sort in memory for free, so the cost is $\theta(M/B)$
+In the base case of the IO Efficient Mergesort, we can sort in memory for free, so the cost is $\Theta(M/B)$
 
-In the merge step, we can have $\theta(N/B)$ cache misses since we retrive the blocks of the subarrays iteratively.
+In the merge step, we can have $\Theta(N/B)$ cache misses since we retrive the blocks of the subarrays iteratively.
 
 Thus our recurrence is:
 
 \begin{align*}
-S(N) = (M/B)S(NB/M) + \theta(N/B) \\
+S(N) = (M/B)S(NB/M) + \Theta(N/B) \\
 \text{and so} \\
-S(N) = \theta((N/B)(log_{M/B}(N/M) +1))
+S(N) = \Theta((N/B)(log_{M/B}(N/M) +1))
 \end{align*}
 
 In order to evaluate the efficiency of our IO Efficient Mergesort, we also wrote Quicksort and Selection Sort.
@@ -129,17 +129,27 @@ Because of the overhead of our cache simulator, we were not able to run simluati
 
 \begin{figure}[H]  
 \includegraphics[scale=0.45]{figures/Blocksize_IOEfficientMergeSort.png}
-\caption{Selection Sort Misses}
+\caption{IO Efficient Mergesort on Varied Blocksize}
 \label{listrankingio}
 \end{figure}
+
+In this test we fix the number of blocks in the cache to be 20 and vary the block size. The number of misses here is clearly logarithmic in the blocksize. 
+
+The number of misses is tapering off as blocksize increases because a larger fraction of the input array can then be stored in cache.
 
 \subsection{Varying Number of Blocks}
 
 \begin{figure}[H]  
 \includegraphics[scale=0.45]{figures/NumBlocks_IOEfficientMergeSort.png}
-\caption{Selection Sort Misses}
+\caption{IO Efficient Mergesort on Varied Number of Blocks}
 \label{listrankingio}
 \end{figure}
+
+In this test we fix the block size to 20 and vary the number of blocks.
+
+In our theoretical analysis, we would expect to see a decrease in the number of cache misses on increasing the number of blocks. 
+
+This is clearly not demonstrated experimentally. We believe that the mismatch between our theoretical prediction and our experimental results is due to either constant factors or the divisibility of the input array. We are fairly confident that this is not a result of a coding error, but please do look over our source code.
 
 
 \section{Cache Efficient List Ranking}
