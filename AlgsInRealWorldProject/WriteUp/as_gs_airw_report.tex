@@ -4,6 +4,9 @@
 \usepackage{courier}
 \usepackage{graphicx}
 \usepackage{floatrow}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{centernot}
 
 \begin{document}
 %---------------------------------------------------
@@ -61,9 +64,77 @@ termination.
 
 \section{Cache Efficient Sort}
 
-\subsection{Algorithm Description}
+\subsection{Algorithm Descriptions}
 
-\section{Sorting Experiements}
+
+We implemented an IO Efficient Mergesort, using a k-way merge. We describe the algorithm below.
+
+We first split the input array into k subarrays and sort each recursively
+
+%% , and then perform a k-way merge. We set k equal to (number of blocks)/2.
+
+Then we merge the k subarrays in the same way as a standard mergesort, except that we store a pointer for each subarray and take the largest element at the pointer within each subarray and insert this into a sorted copy of the array. After we have copied all elements from the sorted subarrays into the copy, we replace the original array with the sorted copy.
+
+To perform efficiently in an IO model, we set k equal to (number of blocks)/2. In the merge step we keep only one block in memory per subarray, and so we have enough cache blocks for the subarrays, the copied output array, and the array of pointers into the subarrays. 
+
+Note that it may be equally efficient to set k equal to (number of blocks) - 1 - k/(block size), since we need to keep only one block at a time in memory for the copied array, and require approximately k/(block size) blocks to store the array of pointers. In order to not hassle with small additive constants on the space requirement, we decided to use the above, lower k value.
+
+In analyzing the complexity of our IO Efficient Mergesort, let N be the number of elements to sort, B the block size, and M the total cache size.
+
+In the base case of the IO Efficient Mergesort, we can sort in memory for free, so the cost is $\theta(M/B)$
+
+In the merge step, we can have $\theta(N/B)$ cache misses since we retrive the blocks of the subarrays iteratively.
+
+Thus our recurrence is:
+
+\begin{align*}
+S(N) = (M/B)S(NB/M) + \theta(N/B) \\
+\text{and so} \\
+S(N) = \theta((N/B)(log_{M/B}(N/M) +1))
+\end{align*}
+
+In order to evaluate the efficiency of our IO Efficient Mergesort, we also wrote Quicksort and Selection Sort.
+
+We implemented these algorithms in Java using the following classes: \texttt{IOEfficientMergeSort}, \texttt{QuickSort}, and \texttt{SelectionSort}.
+
+\section{Sorting Experiments}
+
+\subsection{Performance Comparison}
+
+\begin{figure}[H]  
+\includegraphics[scale=0.6]{figures/IOEfficientMisses.png}
+\caption{IO Efficient Mergesort}
+\label{listrankingio}
+\end{figure}
+
+\begin{figure}[H]  
+\includegraphics[scale=0.6]{figures/QuicksortMisses.png}
+\caption{Quicksort Misses}
+\label{listrankingio}
+\end{figure}
+
+\begin{figure}[H]  
+\includegraphics[scale=0.6]{figures/SelectionSortMisses.png}
+\caption{Selection Sort Misses}
+\label{listrankingio}
+\end{figure}
+
+\subsection{Varying Blocksize}
+
+\begin{figure}[H]  
+\includegraphics[scale=0.45]{figures/Blocksize_IOEfficientMergeSort.png}
+\caption{Selection Sort Misses}
+\label{listrankingio}
+\end{figure}
+
+\subsection{Varying Number of Blocks}
+
+\begin{figure}[H]  
+\includegraphics[scale=0.45]{figures/NumBlocks_IOEfficientMergeSort.png}
+\caption{Selection Sort Misses}
+\label{listrankingio}
+\end{figure}
+
 
 \section{Cache Efficient List Ranking}
 Some problems which have very natural solutions in the standard model can have significant more complexity in the I/O Model. 
